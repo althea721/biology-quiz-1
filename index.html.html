@@ -1,0 +1,1049 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>生物第一單元 互動模擬試卷</title>
+<style>
+  :root {
+    --navy: #0f2540;
+    --navy-mid: #1a3a5c;
+    --navy-light: #1e4976;
+    --accent: #2d8cff;
+    --accent-glow: rgba(45,140,255,0.18);
+    --bg: #f0f4f9;
+    --card: #ffffff;
+    --gray-1: #e4eaf2;
+    --gray-2: #b0bec5;
+    --gray-3: #607080;
+    --text: #1a2535;
+    --text-soft: #4a5a6a;
+    --correct: #1db87a;
+    --correct-bg: #e8faf3;
+    --wrong: #e53e5a;
+    --wrong-bg: #fdeef1;
+    --warn: #ff6b35;
+    --warn-bg: #fff3ee;
+    --score-gold: #f5c842;
+    --locked: #a0aab5;
+    --radius: 14px;
+    --radius-sm: 8px;
+    --shadow: 0 4px 24px rgba(15,37,64,0.10);
+    --shadow-lg: 0 8px 40px rgba(15,37,64,0.16);
+    --transition: 0.28s cubic-bezier(0.4,0,0.2,1);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Helvetica Neue', 'PingFang TC', 'Microsoft JhengHei', Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ── TOP BAR ── */
+  .topbar {
+    background: var(--navy);
+    color: #fff;
+    padding: 0 24px;
+    height: 64px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: 0 2px 16px rgba(0,0,0,0.22);
+  }
+  .topbar-title { font-size: 1.05rem; font-weight: 700; letter-spacing: 0.03em; display: flex; align-items: center; gap: 10px; }
+  .topbar-title .icon { font-size: 1.4rem; }
+  .score-board {
+    display: flex; align-items: center; gap: 12px;
+  }
+  .score-display {
+    background: var(--navy-mid);
+    border: 1.5px solid rgba(255,255,255,0.15);
+    border-radius: 40px;
+    padding: 6px 18px;
+    font-size: 0.92rem;
+    font-weight: 600;
+    color: #fff;
+    display: flex; align-items: center; gap: 6px;
+    transition: var(--transition);
+  }
+  .score-display .score-val { color: var(--score-gold); font-size: 1.2rem; font-weight: 800; }
+  .submit-all-btn {
+    background: linear-gradient(135deg, #2d8cff, #1a6ed8);
+    color: #fff;
+    border: none;
+    border-radius: 40px;
+    padding: 8px 20px;
+    font-size: 0.88rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: var(--transition);
+    box-shadow: 0 2px 10px rgba(45,140,255,0.35);
+    white-space: nowrap;
+  }
+  .submit-all-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 18px rgba(45,140,255,0.45); }
+  .submit-all-btn:active { transform: translateY(0); }
+
+  /* ── MAIN LAYOUT ── */
+  .main-wrap { max-width: 860px; margin: 0 auto; padding: 28px 16px 60px; }
+
+  /* ── TABS ── */
+  .tabs-bar {
+    display: flex; gap: 6px;
+    background: var(--card);
+    border-radius: var(--radius);
+    padding: 6px;
+    box-shadow: var(--shadow);
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+  }
+  .tab-btn {
+    flex: 1; min-width: 90px;
+    background: transparent;
+    border: none;
+    border-radius: 10px;
+    padding: 10px 8px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--text-soft);
+    cursor: pointer;
+    transition: var(--transition);
+    white-space: nowrap;
+    text-align: center;
+  }
+  .tab-btn:hover:not(.locked) { background: var(--gray-1); color: var(--navy); }
+  .tab-btn.active {
+    background: var(--navy);
+    color: #fff;
+    box-shadow: 0 2px 10px rgba(15,37,64,0.22);
+  }
+  .tab-btn.locked {
+    color: var(--locked);
+    cursor: not-allowed;
+    position: relative;
+  }
+  .tab-btn .lock-icon { font-size: 0.75rem; margin-left: 3px; }
+
+  /* ── TAB PANELS ── */
+  .tab-panel { display: none; animation: fadeUp 0.32s ease; }
+  .tab-panel.active { display: block; }
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(12px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ── SECTION HEADER ── */
+  .section-header {
+    display: flex; align-items: center; gap: 10px;
+    margin-bottom: 20px;
+  }
+  .section-badge {
+    background: var(--navy);
+    color: #fff;
+    border-radius: 8px;
+    padding: 4px 12px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+  }
+  .section-title { font-size: 1.1rem; font-weight: 700; color: var(--navy); }
+  .section-desc { font-size: 0.82rem; color: var(--text-soft); margin-top: 2px; }
+
+  /* ── QUESTION CARD ── */
+  .q-card {
+    background: var(--card);
+    border-radius: var(--radius);
+    padding: 24px 26px;
+    margin-bottom: 18px;
+    box-shadow: var(--shadow);
+    border: 1.5px solid var(--gray-1);
+    transition: border-color var(--transition);
+  }
+  .q-card.answered { border-color: var(--accent); }
+  .q-num {
+    display: inline-block;
+    background: var(--accent);
+    color: #fff;
+    font-size: 0.72rem;
+    font-weight: 800;
+    border-radius: 20px;
+    padding: 2px 10px;
+    margin-bottom: 10px;
+    letter-spacing: 0.06em;
+  }
+  .q-context {
+    background: linear-gradient(135deg, #eef4ff, #f5f8ff);
+    border-left: 3px solid var(--accent);
+    border-radius: 0 8px 8px 0;
+    padding: 10px 14px;
+    margin-bottom: 14px;
+    font-size: 0.86rem;
+    color: var(--text-soft);
+    line-height: 1.65;
+  }
+  .q-context strong { color: var(--navy); }
+  .q-text { font-size: 0.98rem; font-weight: 600; color: var(--text); margin-bottom: 14px; line-height: 1.6; }
+
+  /* ── CHOICE OPTIONS ── */
+  .choices { display: flex; flex-direction: column; gap: 8px; }
+  .choice-label {
+    display: flex; align-items: flex-start; gap: 10px;
+    border: 1.5px solid var(--gray-1);
+    border-radius: var(--radius-sm);
+    padding: 11px 14px;
+    cursor: pointer;
+    transition: var(--transition);
+    font-size: 0.9rem;
+    line-height: 1.5;
+  }
+  .choice-label:hover { border-color: var(--accent); background: var(--accent-glow); }
+  .choice-label input[type="radio"] { display: none; }
+  .choice-label.selected { border-color: var(--accent); background: var(--accent-glow); }
+  .choice-label.correct  { border-color: var(--correct); background: var(--correct-bg); color: #0a6644; font-weight: 600; }
+  .choice-label.wrong    { border-color: var(--wrong);   background: var(--wrong-bg);   color: #8b1a2e; text-decoration: line-through; }
+  .choice-letter {
+    flex-shrink: 0;
+    width: 24px; height: 24px;
+    border: 1.5px solid var(--gray-2);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.75rem; font-weight: 700;
+    transition: var(--transition);
+  }
+  .choice-label.selected .choice-letter { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .choice-label.correct  .choice-letter { background: var(--correct); border-color: var(--correct); color: #fff; }
+  .choice-label.wrong    .choice-letter { background: var(--wrong);   border-color: var(--wrong);   color: #fff; }
+
+  /* ── FILL BLANK ── */
+  .fill-input {
+    width: 100%;
+    border: 1.5px solid var(--gray-1);
+    border-radius: var(--radius-sm);
+    padding: 10px 14px;
+    font-size: 0.95rem;
+    color: var(--text);
+    background: #fafcff;
+    transition: var(--transition);
+    outline: none;
+  }
+  .fill-input:focus { border-color: var(--accent); background: #fff; box-shadow: 0 0 0 3px var(--accent-glow); }
+  .fill-input.correct { border-color: var(--correct); background: var(--correct-bg); color: #0a6644; }
+  .fill-input.wrong   { border-color: var(--wrong);   background: var(--wrong-bg);   color: #8b1a2e; }
+
+  /* ── SUBMIT BTN (per card) ── */
+  .submit-card-btn {
+    margin-top: 14px;
+    background: var(--navy);
+    color: #fff;
+    border: none;
+    border-radius: var(--radius-sm);
+    padding: 9px 22px;
+    font-size: 0.86rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: var(--transition);
+  }
+  .submit-card-btn:hover { background: var(--navy-light); transform: translateY(-1px); }
+  .submit-card-btn:disabled { opacity: 0.5; cursor: default; transform: none; }
+
+  /* ── FEEDBACK BLOCK ── */
+  .feedback {
+    margin-top: 14px;
+    border-radius: var(--radius-sm);
+    padding: 12px 16px;
+    font-size: 0.86rem;
+    line-height: 1.65;
+    display: none;
+  }
+  .feedback.show { display: block; animation: fadeUp 0.25s ease; }
+  .feedback.correct-fb { background: var(--correct-bg); border: 1px solid rgba(29,184,122,0.3); color: #0a6644; }
+  .feedback.wrong-fb   { background: var(--wrong-bg);   border: 1px solid rgba(229,62,90,0.3);  color: #8b1a2e; }
+  .feedback-icon { font-size: 1.1rem; margin-right: 6px; }
+  .feedback strong { font-weight: 700; }
+
+  /* ── HINT TOGGLE (subjective) ── */
+  .hint-toggle {
+    margin-top: 14px;
+    background: transparent;
+    border: 1.5px solid var(--accent);
+    color: var(--accent);
+    border-radius: var(--radius-sm);
+    padding: 8px 18px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition);
+    display: flex; align-items: center; gap: 6px;
+  }
+  .hint-toggle:hover { background: var(--accent-glow); }
+  .hint-body {
+    margin-top: 12px;
+    background: linear-gradient(135deg, #f0f7ff, #f8fbff);
+    border: 1px solid rgba(45,140,255,0.2);
+    border-radius: var(--radius-sm);
+    padding: 14px 16px;
+    font-size: 0.88rem;
+    line-height: 1.7;
+    color: var(--text-soft);
+    display: none;
+  }
+  .hint-body.open { display: block; animation: fadeUp 0.22s ease; }
+  .hint-body h4 { color: var(--navy); font-size: 0.88rem; margin-bottom: 6px; }
+  .hint-body ul { padding-left: 18px; }
+  .hint-body ul li { margin-bottom: 4px; }
+
+  /* ── SCORE RESULT ── */
+  .result-overlay {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(10,20,40,0.6);
+    z-index: 200;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(4px);
+  }
+  .result-overlay.show { display: flex; animation: fadeUp 0.3s ease; }
+  .result-card {
+    background: var(--card);
+    border-radius: 20px;
+    padding: 40px 36px;
+    max-width: 420px;
+    width: 90%;
+    text-align: center;
+    box-shadow: var(--shadow-lg);
+  }
+  .result-emoji { font-size: 3.5rem; margin-bottom: 10px; }
+  .result-score { font-size: 2.8rem; font-weight: 900; color: var(--navy); }
+  .result-score span { font-size: 1.2rem; font-weight: 600; color: var(--gray-3); }
+  .result-comment { font-size: 1rem; color: var(--text-soft); margin: 12px 0 20px; line-height: 1.6; }
+  .result-close {
+    background: var(--navy);
+    color: #fff;
+    border: none;
+    border-radius: 40px;
+    padding: 12px 32px;
+    font-size: 0.95rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: var(--transition);
+  }
+  .result-close:hover { background: var(--navy-light); }
+
+  /* ── CONCEPT TREE ── */
+  .tree-wrap { padding: 4px 0; }
+  .tree-node { margin: 0; }
+  .tree-label {
+    display: flex; align-items: flex-start; gap: 10px;
+    padding: 9px 14px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    font-size: 0.91rem;
+    font-weight: 600;
+    color: var(--navy);
+    transition: background var(--transition);
+    user-select: none;
+  }
+  .tree-label:hover { background: var(--gray-1); }
+  .tree-arrow {
+    flex-shrink: 0;
+    display: inline-block;
+    width: 18px; height: 18px;
+    border-radius: 4px;
+    background: var(--navy);
+    color: #fff;
+    font-size: 0.65rem;
+    font-weight: 900;
+    display: flex; align-items: center; justify-content: center;
+    transition: transform var(--transition);
+    margin-top: 2px;
+  }
+  .tree-node.open > .tree-label .tree-arrow { transform: rotate(90deg); }
+  .tree-children {
+    display: none;
+    padding-left: 24px;
+    border-left: 2px solid var(--gray-1);
+    margin-left: 22px;
+    margin-top: 2px;
+    margin-bottom: 4px;
+  }
+  .tree-node.open > .tree-children { display: block; animation: fadeUp 0.2s ease; }
+  .tree-leaf {
+    padding: 7px 14px;
+    font-size: 0.86rem;
+    color: var(--text-soft);
+    line-height: 1.6;
+    border-radius: var(--radius-sm);
+  }
+  .tree-leaf:hover { background: var(--gray-1); }
+  /* Misconception tag */
+  .mis-tag {
+    display: inline-flex; align-items: center; gap: 4px;
+    background: var(--warn-bg);
+    border: 1.5px solid var(--warn);
+    color: var(--warn);
+    font-size: 0.72rem;
+    font-weight: 800;
+    border-radius: 20px;
+    padding: 1px 9px;
+    margin-left: 6px;
+    letter-spacing: 0.04em;
+    flex-shrink: 0;
+  }
+  .mis-alert {
+    background: var(--warn-bg);
+    border-left: 3px solid var(--warn);
+    border-radius: 0 8px 8px 0;
+    padding: 8px 12px;
+    font-size: 0.82rem;
+    color: #a04000;
+    margin: 4px 0 6px 14px;
+    line-height: 1.6;
+  }
+  .tree-section-title {
+    font-size: 1rem; font-weight: 800; color: var(--navy);
+    margin: 20px 0 6px;
+    padding: 8px 14px;
+    background: var(--gray-1);
+    border-radius: var(--radius-sm);
+  }
+
+  /* ── TOAST ── */
+  .toast {
+    position: fixed;
+    bottom: 30px; left: 50%; transform: translateX(-50%) translateY(60px);
+    background: var(--navy);
+    color: #fff;
+    border-radius: 40px;
+    padding: 12px 28px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    box-shadow: var(--shadow-lg);
+    z-index: 300;
+    transition: transform 0.35s cubic-bezier(0.4,0,0.2,1), opacity 0.35s;
+    opacity: 0;
+    pointer-events: none;
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+
+  /* ── RESPONSIVE ── */
+  @media (max-width: 600px) {
+    .topbar { padding: 0 14px; }
+    .topbar-title { font-size: 0.88rem; }
+    .submit-all-btn { font-size: 0.78rem; padding: 7px 14px; }
+    .main-wrap { padding: 16px 10px 60px; }
+    .q-card { padding: 18px 16px; }
+    .tabs-bar { gap: 4px; padding: 4px; }
+    .tab-btn { font-size: 0.75rem; padding: 8px 4px; min-width: 60px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<header class="topbar">
+  <div class="topbar-title">
+    <span class="icon">🧬</span>
+    <div>
+      <div>生物第一單元</div>
+      <div style="font-size:0.7rem;font-weight:400;opacity:0.65;margin-top:1px;">細胞構造・能量・細胞分裂</div>
+    </div>
+  </div>
+  <div class="score-board">
+    <div class="score-display">分數 <span class="score-val" id="liveScore">0</span> / <span id="totalPossible">10</span></div>
+    <button class="submit-all-btn" onclick="submitAll()">📋 提交試卷</button>
+  </div>
+</header>
+
+<!-- MAIN -->
+<div class="main-wrap">
+
+  <!-- TABS -->
+  <div class="tabs-bar" role="tablist">
+    <button class="tab-btn active" onclick="switchTab(0)" id="tab0">📝 客觀題</button>
+    <button class="tab-btn" onclick="switchTab(1)" id="tab1">💬 深層問答</button>
+    <button class="tab-btn" onclick="switchTab(2)" id="tab2">🔬 拓展思辨</button>
+    <button class="tab-btn locked" onclick="tryLockedTab()" id="tab3">🔍 概念圖 <span class="lock-icon">🔒</span></button>
+  </div>
+
+  <!-- ════ TAB 0 : 客觀題 ════ -->
+  <div class="tab-panel active" id="panel0">
+    <div class="section-header">
+      <div>
+        <div class="section-badge">SECTION A</div>
+        <div class="section-title">客觀題（單選 + 填空）</div>
+        <div class="section-desc">每題 1 分，共 5 題。作答後點選「確認答案」即時批改。</div>
+      </div>
+    </div>
+
+    <!-- Q1 : 單選 -->
+    <div class="q-card" id="qcard-1">
+      <div class="q-num">第 1 題 · 單選</div>
+      <div class="q-context">
+        🔬 <strong>情境：</strong>某研究生在顯微鏡下觀察兩種微生物（甲與乙）。甲具有核膜包裹的細胞核，且細胞質中可見粒線體；乙的遺傳物質直接懸浮於細胞質中，無任何膜狀胞器。
+      </div>
+      <div class="q-text">根據上述觀察結果，下列敘述何者正確？</div>
+      <div class="choices" id="choices-1">
+        <label class="choice-label" data-val="A"><input type="radio" name="q1" value="A"><span class="choice-letter">A</span>甲、乙均屬於原核生物，差別僅在於粒線體有無。</label>
+        <label class="choice-label" data-val="B"><input type="radio" name="q1" value="B"><span class="choice-letter">B</span>甲屬於真核生物，乙屬於原核生物；兩者均有細胞壁與細胞膜。</label>
+        <label class="choice-label" data-val="C"><input type="radio" name="q1" value="C"><span class="choice-letter">C</span>甲屬於真核生物，乙屬於原核生物；原核生物完全沒有 DNA。</label>
+        <label class="choice-label" data-val="D"><input type="radio" name="q1" value="D"><span class="choice-letter">D</span>乙屬於真核生物，因為真核生物的 DNA 不需要包在細胞核內。</label>
+      </div>
+      <button class="submit-card-btn" onclick="submitMC(1,'B','甲具核膜＋粒線體 → 真核生物；乙無核膜 → 原核生物。原核生物仍有 DNA（裸露於細胞質），細胞外也可能有細胞壁，但不是全部都有（如黴漿菌無細胞壁）。選項B最符合題意。注意：原核≠無DNA，有無核膜才是根本區別！')">確認答案</button>
+      <div class="feedback" id="fb-1"></div>
+    </div>
+
+    <!-- Q2 : 單選 -->
+    <div class="q-card" id="qcard-2">
+      <div class="q-num">第 2 題 · 單選</div>
+      <div class="q-context">
+        📊 <strong>情境：</strong>某醫師正在評估一位病人的細胞能量代謝。血液檢查顯示該病人粒線體功能嚴重受損。已知細胞在無氧環境下仍可進行糖解作用，產生少量 ATP。
+      </div>
+      <div class="q-text">下列關於 ATP 的敘述，何者正確？</div>
+      <div class="choices" id="choices-2">
+        <label class="choice-label" data-val="A"><input type="radio" name="q2" value="A"><span class="choice-letter">A</span>ATP 是去氧核糖核酸（DNA）的直接原料，合成 DNA 時需要大量 ATP。</label>
+        <label class="choice-label" data-val="B"><input type="radio" name="q2" value="B"><span class="choice-letter">B</span>ATP 中的「T」代表三個磷酸根，水解後釋放能量可供細胞直接利用。</label>
+        <label class="choice-label" data-val="C"><input type="radio" name="q2" value="C"><span class="choice-letter">C</span>ATP 僅能在有氧條件下由粒線體合成，無氧時細胞完全無法產生 ATP。</label>
+        <label class="choice-label" data-val="D"><input type="radio" name="q2" value="D"><span class="choice-letter">D</span>ATP 全名為腺苷三磷酸，其含氮鹼基為腺嘌呤，是 RNA 的原料之一，而非 DNA 的原料。</label>
+      </div>
+      <button class="submit-card-btn" onclick="submitMC(2,'D','ATP（腺苷三磷酸）含有腺嘌呤＋核糖＋三個磷酸根，是 RNA 的四種原料之一（A、U、G、C 對應的核苷酸）。DNA 的原料為去氧核糖核苷酸（dATP、dTTP、dGTP、dCTP）。此外，糖解作用在細胞質中即可進行，無粒線體也能產生 ATP（雖較少）。')">確認答案</button>
+      <div class="feedback" id="fb-2"></div>
+    </div>
+
+    <!-- Q3 : 單選 -->
+    <div class="q-card" id="qcard-3">
+      <div class="q-num">第 3 題 · 單選</div>
+      <div class="q-context">
+        🌱 <strong>情境：</strong>科學家以螢光染料標記洋蔥根尖細胞，觀察到某時期的細胞中，染色體排列在細胞赤道板上，紡錘絲清晰可見，且每條染色體由兩條染色分體組成。
+      </div>
+      <div class="q-text">根據描述，此細胞最可能處於有絲分裂的哪一個時期？</div>
+      <div class="choices" id="choices-3">
+        <label class="choice-label" data-val="A"><input type="radio" name="q3" value="A"><span class="choice-letter">A</span>前期（Prophase）——染色質開始凝縮。</label>
+        <label class="choice-label" data-val="B"><input type="radio" name="q3" value="B"><span class="choice-letter">B</span>中期（Metaphase）——染色體排列於赤道板，最適合計數染色體。</label>
+        <label class="choice-label" data-val="C"><input type="radio" name="q3" value="C"><span class="choice-letter">C</span>後期（Anaphase）——姊妹染色分體分離，向兩極移動。</label>
+        <label class="choice-label" data-val="D"><input type="radio" name="q3" value="D"><span class="choice-letter">D</span>末期（Telophase）——核膜重新出現，染色體解凝縮。</label>
+      </div>
+      <button class="submit-card-btn" onclick="submitMC(3,'B','關鍵線索「排列在赤道板上、紡錘絲清晰、染色體由兩條染色分體組成」是有絲分裂中期的典型特徵。中期染色體最為凝縮，是觀察與計數染色體的最佳時機。後期才是染色分體分離的時刻。')">確認答案</button>
+      <div class="feedback" id="fb-3"></div>
+    </div>
+
+    <!-- Q4 : 單選 -->
+    <div class="q-card" id="qcard-4">
+      <div class="q-num">第 4 題 · 單選</div>
+      <div class="q-context">
+        🧪 <strong>情境：</strong>下表為某動物細胞在不同分裂方式下，各時期的「染色體數目（n）」與「DNA 含量（d）」比較。假設該動物體細胞染色體數為 2n = 8。
+        <br><br>
+        <table style="width:100%;border-collapse:collapse;font-size:0.83rem;margin-top:4px;">
+          <tr style="background:rgba(45,140,255,0.1);">
+            <th style="padding:5px 8px;border:1px solid #cde;text-align:left;">時期</th>
+            <th style="padding:5px 8px;border:1px solid #cde;text-align:center;">染色體數</th>
+            <th style="padding:5px 8px;border:1px solid #cde;text-align:center;">DNA含量</th>
+          </tr>
+          <tr>
+            <td style="padding:5px 8px;border:1px solid #cde;">甲時期</td>
+            <td style="padding:5px 8px;border:1px solid #cde;text-align:center;">4</td>
+            <td style="padding:5px 8px;border:1px solid #cde;text-align:center;">8d</td>
+          </tr>
+          <tr>
+            <td style="padding:5px 8px;border:1px solid #cde;">乙時期</td>
+            <td style="padding:5px 8px;border:1px solid #cde;text-align:center;">8</td>
+            <td style="padding:5px 8px;border:1px solid #cde;text-align:center;">8d</td>
+          </tr>
+        </table>
+      </div>
+      <div class="q-text">根據資料判斷，甲時期最可能對應減數分裂的哪個階段？</div>
+      <div class="choices" id="choices-4">
+        <label class="choice-label" data-val="A"><input type="radio" name="q4" value="A"><span class="choice-letter">A</span>減數分裂第一次分裂（減一）中期——同源染色體還未分離。</label>
+        <label class="choice-label" data-val="B"><input type="radio" name="q4" value="B"><span class="choice-letter">B</span>減數分裂第一次分裂結束後（減一完成）——同源染色體已分離到兩個子細胞。</label>
+        <label class="choice-label" data-val="C"><input type="radio" name="q4" value="C"><span class="choice-letter">C</span>減數分裂第二次分裂（減二）中期——染色分體仍連接於著絲點。</label>
+        <label class="choice-label" data-val="D"><input type="radio" name="q4" value="D"><span class="choice-letter">D</span>有絲分裂中期——染色體已複製但著絲點尚未分裂。</label>
+      </div>
+      <button class="submit-card-btn" onclick="submitMC(4,'B','甲時期：染色體數為4（半數），DNA含量為8d（每條染色體含2條染色分體）。這代表同源染色體已分離（染色體數減半），但染色分體尚未分離（DNA未再減半）。此為減一完成後、減二開始前的狀態。減二中期染色體數同樣為4，但DNA為8d，著絲點尚未裂開；選B最精確描述「減一剛結束」的過渡狀態。')">確認答案</button>
+      <div class="feedback" id="fb-4"></div>
+    </div>
+
+    <!-- Q5 : 填空 -->
+    <div class="q-card" id="qcard-5">
+      <div class="q-num">第 5 題 · 填空</div>
+      <div class="q-context">
+        🏥 <strong>情境：</strong>臨床上，癌症患者常接受「化療藥物秋水仙素（colchicine）」治療。秋水仙素的作用原理是阻止紡錘絲的形成，使分裂中的癌細胞停留在有絲分裂的特定時期，進而無法完成細胞分裂。
+      </div>
+      <div class="q-text">秋水仙素會使細胞停留在有絲分裂的哪個時期？（請輸入中文名稱，例如「前期」）</div>
+      <input class="fill-input" id="fill-5" type="text" placeholder="輸入答案…" oninput="document.getElementById('qcard-5').classList.add('answered')">
+      <button class="submit-card-btn" onclick="submitFill(5,['中期','metaphase'],'秋水仙素阻止紡錘絲（微管）聚合，細胞停在有絲分裂中期——此時染色體已凝縮排列於赤道板，但紡錘絲無法牽引著絲點，無法進入後期。臨床及研究上常利用此特性收集大量中期染色體，用於染色體核型分析。')">確認答案</button>
+      <div class="feedback" id="fb-5"></div>
+    </div>
+  </div><!-- /panel0 -->
+
+  <!-- ════ TAB 1 : 深層問答 ════ -->
+  <div class="tab-panel" id="panel1">
+    <div class="section-header">
+      <div>
+        <div class="section-badge">SECTION B</div>
+        <div class="section-title">課文深層問答</div>
+        <div class="section-desc">共 3 題。展開「提示與參考答案」自行核對，盡量先獨立作答！</div>
+      </div>
+    </div>
+
+    <!-- SQ1 -->
+    <div class="q-card">
+      <div class="q-num">第 6 題 · 問答</div>
+      <div class="q-context">🔬 <strong>情境：</strong>細胞好比一座精密的城市，不同的「建築物」負責不同功能。</div>
+      <div class="q-text">請比較「粒線體（mitochondria）」與「葉綠體（chloroplast）」在細胞能量轉換中的角色，並說明兩者在構造上的共同特徵（至少2點）及各自負責的能量轉換反應。</div>
+      <textarea class="fill-input" rows="4" style="resize:vertical;" placeholder="在此輸入你的答案…"></textarea>
+      <button class="hint-toggle" onclick="toggleHint(this)">💡 顯示答題提示與參考答案 ▼</button>
+      <div class="hint-body">
+        <h4>📌 參考答案要點</h4>
+        <ul>
+          <li><strong>粒線體</strong>：進行<strong>細胞呼吸作用</strong>（有氧呼吸），將有機物（葡萄糖）中的化學能轉換成 ATP；消耗 O₂，釋放 CO₂ 與 H₂O。</li>
+          <li><strong>葉綠體</strong>：進行<strong>光合作用</strong>，利用光能將 CO₂ + H₂O 合成有機物（葡萄糖），並釋放 O₂；光能 → 化學能。</li>
+          <li><strong>共同構造特徵（任選2點）</strong>：①均有兩層膜（雙層膜）；②均含有自己的 DNA 與核糖體（半自主性胞器）；③均由內膜形成的特化結構增大表面積（粒線體：嵴 cristae；葉綠體：類囊體膜 thylakoid）。</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- SQ2 -->
+    <div class="q-card">
+      <div class="q-num">第 7 題 · 問答</div>
+      <div class="q-context">🧬 <strong>情境：</strong>生物體的遺傳訊息傳遞遵循「中心法則」（Central Dogma）。</div>
+      <div class="q-text">請說明「DNA 複製」與「有絲分裂」之間的先後關係，並解釋細胞週期中 S 期（DNA 合成期）的重要性。若 S 期出現錯誤而未被修復，可能造成什麼後果？</div>
+      <textarea class="fill-input" rows="4" style="resize:vertical;" placeholder="在此輸入你的答案…"></textarea>
+      <button class="hint-toggle" onclick="toggleHint(this)">💡 顯示答題提示與參考答案 ▼</button>
+      <div class="hint-body">
+        <h4>📌 參考答案要點</h4>
+        <ul>
+          <li><strong>順序</strong>：DNA 複製（S 期）發生在有絲分裂（M 期）之前，屬於間期（G₁ → S → G₂）階段。先複製，再分裂，確保子細胞獲得完整遺傳訊息。</li>
+          <li><strong>S 期重要性</strong>：染色體（DNA）精確複製，使 DNA 含量由 2n 倍增為 4n，為有絲分裂時平均分配給兩個子細胞做準備。</li>
+          <li><strong>S 期出錯的後果</strong>：若 DNA 複製出錯（突變）且細胞修復機制失效，可能導致基因突變或染色體異常，長期累積可能誘發癌症（腫瘤細胞的特徵之一即為基因組不穩定）。</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- SQ3 -->
+    <div class="q-card">
+      <div class="q-num">第 8 題 · 問答</div>
+      <div class="q-context">🌿 <strong>情境：</strong>植物細胞與動物細胞在細胞分裂結束時，胞質分裂的方式有所不同。</div>
+      <div class="q-text">請說明植物細胞有絲分裂末期的胞質分裂方式，並與動物細胞的方式進行比較，解釋造成差異的原因（提示：與細胞壁有關）。</div>
+      <textarea class="fill-input" rows="4" style="resize:vertical;" placeholder="在此輸入你的答案…"></textarea>
+      <button class="hint-toggle" onclick="toggleHint(this)">💡 顯示答題提示與參考答案 ▼</button>
+      <div class="hint-body">
+        <h4>📌 參考答案要點</h4>
+        <ul>
+          <li><strong>植物細胞</strong>：末期時，由高基氏體囊泡聚集在赤道板，由內向外形成「細胞板（cell plate）」，逐漸發展為新的細胞壁，將細胞一分為二。無法產生縊縮環。</li>
+          <li><strong>動物細胞</strong>：末期時，赤道板位置的細胞膜向內凹陷，由肌動蛋白與肌凝蛋白形成「縊縮環（cleavage furrow）」向內收縮，將細胞質縊縮分裂。</li>
+          <li><strong>差異原因</strong>：植物細胞具有堅硬的細胞壁，無法像動物細胞一樣由外向內縊縮；因此演化出由內向外建造新壁的方式，透過細胞板來完成胞質分裂。</li>
+        </ul>
+      </div>
+    </div>
+  </div><!-- /panel1 -->
+
+  <!-- ════ TAB 2 : 拓展思辨 ════ -->
+  <div class="tab-panel" id="panel2">
+    <div class="section-header">
+      <div>
+        <div class="section-badge">SECTION C</div>
+        <div class="section-title">拓展思辨</div>
+        <div class="section-desc">共 2 題，考驗跨概念整合能力。展開提示前先獨立思考！</div>
+      </div>
+    </div>
+
+    <!-- TQ1 -->
+    <div class="q-card">
+      <div class="q-num">第 9 題 · 思辨</div>
+      <div class="q-context">
+        🧫 <strong>情境：</strong>海拉細胞（HeLa cells）是醫學史上最著名的人類癌細胞株，自 1951 年至今仍在實驗室中持續增殖，幾乎「不老不死」。科學家發現，這些細胞中的端粒酶（telomerase）活性異常旺盛，使得染色體末端的端粒（telomere）不會隨每次複製而縮短。
+      </div>
+      <div class="q-text">
+        （1）正常體細胞每次分裂後端粒會縮短，請說明這與細胞老化（senescence）的關係。<br>
+        （2）海拉細胞的端粒酶持續活化，賦予它「不死性」，但這同時也意味著什麼風險？試從有絲分裂的調控角度加以分析。
+      </div>
+      <textarea class="fill-input" rows="5" style="resize:vertical;" placeholder="在此輸入你的分析…"></textarea>
+      <button class="hint-toggle" onclick="toggleHint(this)">💡 顯示答題提示與參考答案 ▼</button>
+      <div class="hint-body">
+        <h4>📌 參考思路</h4>
+        <ul>
+          <li><strong>（1）端粒與老化</strong>：每次有絲分裂後，染色體末端的端粒因 DNA 複製機制限制而略微縮短（末端複製問題）。當端粒縮短至臨界長度，細胞感知到「DNA損傷訊號」，觸發細胞週期停止（G₁/S 檢查點），細胞進入複製性衰老，不再分裂，此即細胞老化的分子基礎之一。</li>
+          <li><strong>（2）不死性的風險</strong>：端粒酶持續活化使細胞規避正常的增殖限制，可不斷進行有絲分裂。這意味著細胞喪失了正常的細胞週期調控（如 p53、Rb 等腫瘤抑制基因失效），細胞可無限增殖、無視損傷，是惡性腫瘤的核心特徵。換言之，「不死性」本身就是癌化的關鍵標誌之一。</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- TQ2 -->
+    <div class="q-card">
+      <div class="q-num">第 10 題 · 思辨</div>
+      <div class="q-context">
+        ⚗️ <strong>情境：</strong>一位同學在課堂上做出以下推論：「減數分裂結束後，每個子細胞的染色體數是原來體細胞的一半，所以 DNA 含量也一定是體細胞的一半。」另一位同學卻說：「這個說法在某些情況下不夠精確。」
+      </div>
+      <div class="q-text">
+        請以染色體數目與 DNA 含量的角度，評估上述說法是否正確。請具體說明減數分裂第一次分裂結束後（減一完成）與第二次分裂結束後（減二完成）的細胞，其染色體數與 DNA 含量各有何不同，並繪製或描述兩個時間點的比較。
+      </div>
+      <textarea class="fill-input" rows="5" style="resize:vertical;" placeholder="在此輸入你的分析，可以用文字描述表格…"></textarea>
+      <button class="hint-toggle" onclick="toggleHint(this)">💡 顯示答題提示與參考答案 ▼</button>
+      <div class="hint-body">
+        <h4>📌 參考答案（以體細胞 2n=4、DNA=2d 為例）</h4>
+        <ul>
+          <li><strong>S 期複製後（分裂前）</strong>：染色體 4 條，DNA = 4d（每條含2個染色分體）。</li>
+          <li><strong>減一完成後</strong>：<span style="color:var(--warn);font-weight:700;">染色體減半（2條），但 DNA 仍為 2d</span>——因為著絲點尚未分裂，每條染色體仍含兩條染色分體，DNA 未再減半。</li>
+          <li><strong>減二完成後</strong>：染色體 2 條，DNA = 1d——著絲點分裂，染色分體分離，DNA 才真正減半。</li>
+          <li><strong>結論</strong>：同學的說法僅在「減二完成後」成立；「減一完成後」染色體數雖減半，但 DNA 含量尚未減半，此為常見迷思！</li>
+        </ul>
+      </div>
+    </div>
+  </div><!-- /panel2 -->
+
+  <!-- ════ TAB 3 : 本章核心概念圖（初始鎖定） ════ -->
+  <div class="tab-panel" id="panel3">
+    <div class="section-header">
+      <div>
+        <div class="section-badge">REVIEW</div>
+        <div class="section-title">🔍 本章核心概念圖</div>
+        <div class="section-desc">點擊節點展開，🔶 橘紅標籤為高頻迷思概念，請特別注意！</div>
+      </div>
+    </div>
+
+    <div class="tree-wrap">
+
+      <!-- BLOCK 1: 細胞構造 -->
+      <div class="tree-section-title">🏛️ 一、細胞構造</div>
+      <div class="tree-node" onclick="toggleNode(this)">
+        <div class="tree-label"><span class="tree-arrow">▶</span> 細胞的基本分類</div>
+        <div class="tree-children">
+
+          <div class="tree-node" onclick="toggleNode(this);event.stopPropagation()">
+            <div class="tree-label"><span class="tree-arrow">▶</span> 原核細胞（Prokaryote）</div>
+            <div class="tree-children">
+              <div class="tree-leaf">• 無核膜包裹的細胞核（裸露DNA，稱為擬核 nucleoid）</div>
+              <div class="tree-leaf">• 無膜狀胞器（如粒線體、葉綠體）</div>
+              <div class="tree-leaf">• 有核糖體（70S）、細胞膜、細胞壁（部分）</div>
+              <div class="tree-leaf">• 代表：細菌（Bacteria）、古菌（Archaea）</div>
+              <div class="mis-alert">⚠️ <strong>迷思提醒：</strong>原核生物「沒有細胞核」不代表「沒有DNA」！DNA裸露於細胞質中，仍是遺傳物質。</div>
+            </div>
+          </div>
+
+          <div class="tree-node" onclick="toggleNode(this);event.stopPropagation()">
+            <div class="tree-label"><span class="tree-arrow">▶</span> 真核細胞（Eukaryote）<span class="mis-tag">⚠️ 比較重點</span></div>
+            <div class="tree-children">
+              <div class="tree-leaf">• 有核膜包裹的細胞核，DNA與蛋白質形成染色質</div>
+              <div class="tree-leaf">• 具各種膜狀胞器（粒線體、內質網、高基氏體等）</div>
+              <div class="tree-leaf">• 核糖體為 80S（粒線體與葉綠體內為 70S）</div>
+              <div class="mis-alert">⚠️ <strong>核心差異：有無「核膜」是判斷真核 vs. 原核的唯一標準，不是「有無DNA」或「有無核糖體」！</strong></div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <div class="tree-node" onclick="toggleNode(this)">
+        <div class="tree-label"><span class="tree-arrow">▶</span> 重要胞器功能</div>
+        <div class="tree-children">
+          <div class="tree-node" onclick="toggleNode(this);event.stopPropagation()">
+            <div class="tree-label"><span class="tree-arrow">▶</span> 粒線體（Mitochondria）</div>
+            <div class="tree-children">
+              <div class="tree-leaf">• 功能：有氧呼吸，產生大量 ATP（克氏循環＋電子傳遞鏈）</div>
+              <div class="tree-leaf">• 構造：雙層膜，內膜向內折疊形成「嵴（cristae）」增大面積</div>
+              <div class="tree-leaf">• 半自主性：含自身 DNA 與 70S 核糖體</div>
+            </div>
+          </div>
+          <div class="tree-node" onclick="toggleNode(this);event.stopPropagation()">
+            <div class="tree-label"><span class="tree-arrow">▶</span> 葉綠體（Chloroplast）</div>
+            <div class="tree-children">
+              <div class="tree-leaf">• 功能：光合作用，利用光能合成有機物，釋放 O₂</div>
+              <div class="tree-leaf">• 構造：雙層膜，基質（stroma）中有類囊體（thylakoid）堆疊成基粒（granum）</div>
+              <div class="tree-leaf">• 半自主性：含自身 DNA 與 70S 核糖體（與粒線體相同）</div>
+            </div>
+          </div>
+          <div class="tree-node" onclick="toggleNode(this);event.stopPropagation()">
+            <div class="tree-label"><span class="tree-arrow">▶</span> 其他胞器</div>
+            <div class="tree-children">
+              <div class="tree-leaf">• <strong>核糖體</strong>：蛋白質合成場所，無膜結構</div>
+              <div class="tree-leaf">• <strong>內質網</strong>：粗糙 ER（附核糖體，蛋白質修飾）、光滑 ER（脂質合成）</div>
+              <div class="tree-leaf">• <strong>高基氏體</strong>：蛋白質分類、加工、包裝、分泌</div>
+              <div class="tree-leaf">• <strong>液胞（植物）</strong>：儲存水分、色素、廢物；維持細胞膨壓</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- BLOCK 2: 能量 -->
+      <div class="tree-section-title">⚡ 二、細胞能量與 ATP</div>
+      <div class="tree-node" onclick="toggleNode(this)">
+        <div class="tree-label"><span class="tree-arrow">▶</span> ATP（腺苷三磷酸）<span class="mis-tag">⚠️ 高頻錯誤</span></div>
+        <div class="tree-children">
+          <div class="tree-leaf">• 全名：Adenosine Triphosphate（腺苷三磷酸）</div>
+          <div class="tree-leaf">• 組成：腺嘌呤（A）＋ 核糖 ＋ 三個磷酸根（～P～P～P）</div>
+          <div class="tree-leaf">• ATP → ADP + Pi，釋放能量（約 7.3 kcal/mol）</div>
+          <div class="tree-leaf">• 是細胞「能量貨幣」，直接驅動主動運輸、肌肉收縮、合成代謝等</div>
+          <div class="mis-alert">⚠️ <strong>高頻迷思：ATP 是 RNA 的原料之一（含核糖），而非 DNA 的原料！DNA 的原料為去氧核糖核苷酸（dATP、dTTP、dGTP、dCTP）。</strong>請牢記「有氧→核糖→RNA原料」。</div>
+        </div>
+      </div>
+
+      <div class="tree-node" onclick="toggleNode(this)">
+        <div class="tree-label"><span class="tree-arrow">▶</span> 細胞呼吸作用（有氧）</div>
+        <div class="tree-children">
+          <div class="tree-leaf">• 糖解作用（Glycolysis）：細胞質，不需 O₂，葡萄糖→丙酮酸，淨產 2 ATP</div>
+          <div class="tree-leaf">• 克氏循環（Krebs Cycle）：粒線體基質，釋放 CO₂，生成 NADH/FADH₂</div>
+          <div class="tree-leaf">• 電子傳遞鏈（ETC）：粒線體內膜，消耗 O₂，產生大量 ATP（約 34 ATP）</div>
+          <div class="tree-leaf">• 總方程式：C₆H₁₂O₆ ＋ 6O₂ → 6CO₂ ＋ 6H₂O ＋ ATP（約36~38）</div>
+          <div class="mis-alert">⚠️ <strong>迷思：無氧環境下細胞並非完全無法產生 ATP。糖解作用在細胞質中即可進行（無氧糖解），仍可淨產 2 ATP，但效率極低。</strong></div>
+        </div>
+      </div>
+
+      <!-- BLOCK 3: 細胞分裂 -->
+      <div class="tree-section-title">🔄 三、細胞分裂</div>
+      <div class="tree-node" onclick="toggleNode(this)">
+        <div class="tree-label"><span class="tree-arrow">▶</span> 細胞週期</div>
+        <div class="tree-children">
+          <div class="tree-leaf">• 間期（Interphase）：G₁（生長）→ S（DNA複製）→ G₂（準備分裂）</div>
+          <div class="tree-leaf">• 分裂期（M期）：有絲分裂（前→中→後→末）＋胞質分裂</div>
+          <div class="tree-leaf">• S 期 DNA 複製為分裂做準備，DNA 含量倍增（2n→4n）</div>
+        </div>
+      </div>
+
+      <div class="tree-node" onclick="toggleNode(this)">
+        <div class="tree-label"><span class="tree-arrow">▶</span> 有絲分裂（Mitosis）</div>
+        <div class="tree-children">
+          <div class="tree-leaf">• 前期：染色質凝縮，核膜消失，紡錘絲形成</div>
+          <div class="tree-leaf">• 中期：染色體排列在赤道板，<strong>最適合計數染色體</strong></div>
+          <div class="tree-leaf">• 後期：著絲點分裂，姊妹染色分體分離並移向兩極</div>
+          <div class="tree-leaf">• 末期：核膜重現，染色體解凝縮，胞質分裂</div>
+          <div class="tree-leaf">• 結果：2個子細胞，與母細胞染色體數相同（2n→2n）</div>
+        </div>
+      </div>
+
+      <div class="tree-node" onclick="toggleNode(this)">
+        <div class="tree-label"><span class="tree-arrow">▶</span> 減數分裂（Meiosis）<span class="mis-tag">⚠️ 最難混淆</span></div>
+        <div class="tree-children">
+
+          <div class="tree-node" onclick="toggleNode(this);event.stopPropagation()">
+            <div class="tree-label"><span class="tree-arrow">▶</span> 減數第一次分裂（Meiosis I）</div>
+            <div class="tree-children">
+              <div class="tree-leaf">• 前期一：同源染色體聯會，形成四分體，可發生互換（crossing over）</div>
+              <div class="tree-leaf">• 中期一：同源染色體（四分體）排列於赤道板</div>
+              <div class="tree-leaf">• 後期一：<strong>同源染色體分離</strong>（著絲點不分裂！）→ 染色體數減半</div>
+              <div class="tree-leaf">• 末期一結束：各子細胞 n 條染色體，但每條含 2 條染色分體</div>
+              <div class="mis-alert">⚠️ <strong>關鍵迷思：減一結束後，染色體數減半（n），但 DNA 含量尚未減半（仍為 2n 個 DNA 分子），因為著絲點尚未裂開！許多同學誤以為染色體減半＝DNA也減半，這是錯誤的。</strong></div>
+            </div>
+          </div>
+
+          <div class="tree-node" onclick="toggleNode(this);event.stopPropagation()">
+            <div class="tree-label"><span class="tree-arrow">▶</span> 減數第二次分裂（Meiosis II）</div>
+            <div class="tree-children">
+              <div class="tree-leaf">• 類似有絲分裂，但細胞中無同源染色體</div>
+              <div class="tree-leaf">• 後期二：<strong>著絲點分裂</strong>，姊妹染色分體分離 → DNA 含量減半</div>
+              <div class="tree-leaf">• 結果：共 4 個子細胞（n 條染色體，1 個 DNA 分子/染色體）</div>
+              <div class="mis-alert">⚠️ <strong>染色體數 vs DNA 含量時間點整理：同源染色體分離（減一後期）→ 染色體數減半；著絲點分裂（減二後期）→ DNA含量減半。這是兩個不同事件，發生在不同時間！</strong></div>
+            </div>
+          </div>
+
+          <div class="tree-node" onclick="toggleNode(this);event.stopPropagation()">
+            <div class="tree-label"><span class="tree-arrow">▶</span> 有絲 vs. 減數 分裂比較</div>
+            <div class="tree-children">
+              <div class="tree-leaf">• 有絲：1次分裂，2個子細胞，染色體數不變（2n→2n），體細胞用</div>
+              <div class="tree-leaf">• 減數：2次分裂，4個子細胞，染色體數減半（2n→n），生殖細胞用</div>
+              <div class="tree-leaf">• 只有減數分裂前期一才有「聯會」與「互換」現象</div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+    </div><!-- /tree-wrap -->
+  </div><!-- /panel3 -->
+
+</div><!-- /main-wrap -->
+
+<!-- RESULT OVERLAY -->
+<div class="result-overlay" id="resultOverlay">
+  <div class="result-card">
+    <div class="result-emoji" id="resultEmoji">🎉</div>
+    <div class="result-score"><span id="finalScore">0</span> <span>/ 5 分</span></div>
+    <div class="result-comment" id="resultComment"></div>
+    <button class="result-close" onclick="closeResult()">繼續複習 →</button>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+  // ── State ──
+  const state = {
+    scores: {},      // qid -> points earned
+    submitted: {},   // qid -> true
+    totalObj: 5,     // objective questions count
+    unlocked: false  // concept tab locked
+  };
+
+  // ── Tab switching ──
+  function switchTab(idx) {
+    if (idx === 3 && !state.unlocked) return;
+    document.querySelectorAll('.tab-btn').forEach((b,i) => b.classList.toggle('active', i===idx));
+    document.querySelectorAll('.tab-panel').forEach((p,i) => p.classList.toggle('active', i===idx));
+  }
+  function tryLockedTab() {
+    if (!state.unlocked) showToast('🔒 請先提交至少一題，即可解鎖概念圖！');
+  }
+  function unlockConceptTab() {
+    if (state.unlocked) return;
+    state.unlocked = true;
+    const tab = document.getElementById('tab3');
+    tab.classList.remove('locked');
+    tab.innerHTML = '🔍 概念圖 ✨';
+    tab.onclick = () => switchTab(3);
+    showToast('🔓 「本章核心概念圖」已解鎖！');
+  }
+
+  // ── Score display ──
+  function updateScore() {
+    let total = 0;
+    for (const k in state.scores) total += state.scores[k];
+    document.getElementById('liveScore').textContent = total;
+  }
+
+  // ── Submit MC (single choice) ──
+  function submitMC(qid, correct, explanation) {
+    if (state.submitted[qid]) return;
+    const choicesEl = document.getElementById('choices-' + qid);
+    const labels = choicesEl.querySelectorAll('.choice-label');
+    let selected = null;
+    labels.forEach(lbl => {
+      const inp = lbl.querySelector('input');
+      if (inp.checked) selected = lbl.dataset.val;
+    });
+    if (!selected) { showToast('⚠️ 請先選擇一個選項！'); return; }
+
+    state.submitted[qid] = true;
+    unlockConceptTab();
+
+    labels.forEach(lbl => {
+      lbl.style.cursor = 'default';
+      lbl.querySelector('input').disabled = true;
+      if (lbl.dataset.val === correct) lbl.classList.add('correct');
+      else if (lbl.dataset.val === selected && selected !== correct) lbl.classList.add('wrong');
+    });
+
+    const isCorrect = selected === correct;
+    if (isCorrect) state.scores[qid] = 1;
+    else state.scores[qid] = 0;
+    updateScore();
+
+    const fb = document.getElementById('fb-' + qid);
+    fb.className = 'feedback show ' + (isCorrect ? 'correct-fb' : 'wrong-fb');
+    fb.innerHTML = `<span class="feedback-icon">${isCorrect ? '✅' : '❌'}</span>
+      <strong>${isCorrect ? '答對了！' : '答錯了。正確答案是（' + correct + '）'}</strong><br>
+      <span style="margin-top:4px;display:block;">📖 <strong>解析：</strong>${explanation}</span>`;
+
+    document.querySelector(`#qcard-${qid} .submit-card-btn`).disabled = true;
+    document.getElementById('qcard-' + qid).classList.add('answered');
+  }
+
+  // ── Submit Fill ──
+  function submitFill(qid, acceptedArr, explanation) {
+    if (state.submitted[qid]) return;
+    const inp = document.getElementById('fill-' + qid);
+    const val = inp.value.trim().toLowerCase();
+    if (!val) { showToast('⚠️ 請先輸入答案！'); return; }
+
+    state.submitted[qid] = true;
+    unlockConceptTab();
+
+    const isCorrect = acceptedArr.some(a => val.includes(a.toLowerCase()));
+    inp.disabled = true;
+    inp.classList.add(isCorrect ? 'correct' : 'wrong');
+    if (isCorrect) state.scores[qid] = 1;
+    else state.scores[qid] = 0;
+    updateScore();
+
+    const fb = document.getElementById('fb-' + qid);
+    fb.className = 'feedback show ' + (isCorrect ? 'correct-fb' : 'wrong-fb');
+    fb.innerHTML = `<span class="feedback-icon">${isCorrect ? '✅' : '❌'}</span>
+      <strong>${isCorrect ? '答對了！' : '答錯了。正確答案是「中期」'}</strong><br>
+      <span style="margin-top:4px;display:block;">📖 <strong>解析：</strong>${explanation}</span>`;
+
+    document.querySelector(`#qcard-5 .submit-card-btn`).disabled = true;
+    document.getElementById('qcard-5').classList.add('answered');
+  }
+
+  // ── Submit All ──
+  function submitAll() {
+    let unanswered = 0;
+    for (let i = 1; i <= 5; i++) {
+      if (!state.submitted[i]) unanswered++;
+    }
+    if (unanswered > 0) {
+      showToast(`⚠️ 客觀題還有 ${unanswered} 題未作答，計分僅含已答題目`);
+    }
+    unlockConceptTab();
+    let total = 0;
+    for (const k in state.scores) total += state.scores[k];
+    showResult(total);
+  }
+
+  function showResult(score) {
+    document.getElementById('finalScore').textContent = score;
+    let emoji, comment;
+    if (score === 5) {
+      emoji = '🏆'; comment = '滿分！你的生物概念非常扎實，媽媽/爸爸要給你一個大擁抱！繼續保持這份認真！';
+    } else if (score >= 4) {
+      emoji = '🌟'; comment = '非常棒！只差一步就滿分，再複習一下錯誤的題目，你一定可以的！';
+    } else if (score >= 3) {
+      emoji = '💪'; comment = '做得不錯！基礎概念已經掌握，建議回顧一下「迷思概念」的部分，加油！';
+    } else if (score >= 2) {
+      emoji = '📚'; comment = '繼續努力！可以去看看「本章核心概念圖」，搞清楚容易混淆的地方，再練習一次！';
+    } else {
+      emoji = '🌱'; comment = '沒關係，每次錯誤都是學習的機會！打開「概念圖」仔細讀一讀，你一定會進步的！';
+    }
+    document.getElementById('resultEmoji').textContent = emoji;
+    document.getElementById('resultComment').textContent = comment;
+    document.getElementById('resultOverlay').classList.add('show');
+  }
+
+  function closeResult() {
+    document.getElementById('resultOverlay').classList.remove('show');
+  }
+
+  // ── Hint Toggle ──
+  function toggleHint(btn) {
+    const body = btn.nextElementSibling;
+    body.classList.toggle('open');
+    btn.textContent = body.classList.contains('open')
+      ? '💡 收起提示與參考答案 ▲'
+      : '💡 顯示答題提示與參考答案 ▼';
+    unlockConceptTab();
+  }
+
+  // ── Tree Toggle ──
+  function toggleNode(node) {
+    node.classList.toggle('open');
+  }
+
+  // ── Toast ──
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2800);
+  }
+
+  // ── Choice selection ──
+  document.querySelectorAll('.choices').forEach(container => {
+    container.querySelectorAll('.choice-label').forEach(label => {
+      label.addEventListener('click', function() {
+        const inp = this.querySelector('input');
+        const qid = inp.name.replace('q','');
+        if (state.submitted[qid]) return;
+        container.querySelectorAll('.choice-label').forEach(l => l.classList.remove('selected'));
+        inp.checked = true;
+        this.classList.add('selected');
+        document.getElementById('qcard-' + qid).classList.add('answered');
+      });
+    });
+  });
+</script>
+</body>
+</html>
